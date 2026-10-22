@@ -32,6 +32,17 @@ DEFAULT_IDS = ["P2", "P3a", "P3b"]
 # patches: id -> (file_offset, original_hex, patched_hex)
 BUILDS = [
     {
+        "label": "driver_lighthouse.dll, build shipped 2026-10-17 (driver_lighthouse_20261017.dll)",
+        "sha256": "21d29dfada45fe76f7e2bfee61a4a3fa788cc95820ef2a0fea55d7a0721be52d",
+        "patches": {   # identical layout to the 2026-09-16 build
+            "P2":  (0x5c5ea, "f30f106e20", "e995040000"),  # VA 0x18005d1ea -> jmp 0x18005d684
+            "P3a": (0x62743, "f20f114638", "9090909090"),  # VA 0x180063343
+            "P3b": (0x6274b, "894640",     "909090"),      # VA 0x18006334b
+            "P4":  (0x62e70, "48895c2410", "c390909090"),  # VA 0x180063a70
+            "P1":  (0x5d280, "48895c2418", "c390909090"),  # VA 0x18005de80
+        },
+    },
+    {
         "label": "driver_lighthouse.dll, build shipped 2026-09-16 (driver_lighthouse_20260916.dll)",
         "sha256": "eb6545c837f9d8bc780499a08e201636a1155bad58ea5206daa02830e85b1e36",
         "patches": {
@@ -82,13 +93,17 @@ def detect_build(buf, h):
     cands = [b for b in BUILDS
              if all(site_state(buf, off, bytes.fromhex(o), bytes.fromhex(n)) in ("orig", "patched")
                     for off, o, n in b["patches"].values())]
-    if len(cands) == 1:
-        return cands[0], "all patch sites match (already patched, or an identical layout)"
-    if not cands:
-        print("Unknown build: sha256", h)
-        print("No known build's patch sites match. Re-derive the offsets (see PATCH_NOTES.md) before patching.")
-    else:
-        print("Ambiguous: several known builds match this file's patch sites. Refusing to guess.")
+    if cands:
+        # builds that share one patch table (same offsets and bytes) are interchangeable
+        if all(b["patches"] == cands[0]["patches"] for b in cands):
+            how = "all patch sites match (already patched, or an identical layout)"
+            if len(cands) > 1:
+                how += "; layout shared by: " + "; ".join(b["label"] for b in cands)
+            return cands[0], how
+        print("Ambiguous: several known builds with different patch tables match this file. Refusing to guess.")
+        sys.exit(1)
+    print("Unknown build: sha256", h)
+    print("No known build's patch sites match. Re-derive the offsets (see README.md) before patching.")
     sys.exit(1)
 
 def main():

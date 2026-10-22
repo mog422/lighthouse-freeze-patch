@@ -5,13 +5,14 @@ refuses unknown builds. Supported builds:
 
 | build | sha256 (original) | sha256 (patched, default flags) |
 |-------|-------------------|---------------------------------|
+| 2026-10-17 | `21d29dfada45fe76f7e2bfee61a4a3fa788cc95820ef2a0fea55d7a0721be52d` | `864699a0bdd873cca5602a466729e8ad636643a51584c8c90a5f851765895db2` |
 | 2026-09-16 | `eb6545c837f9d8bc780499a08e201636a1155bad58ea5206daa02830e85b1e36` | `ab715c8ca489a1af194a17f88868827ddcbc751fadd0b56711d0318068de1425` |
 | 2026-09-13 | `5e477db767d07d9071317e2df124acecbee151329a5400d3ecdac5d4eb849c9a` | `de7c773aed0f04115314ca6907ac73e337ff6150eeabcb33ad2da41b4b793f56` |
 
 ## Why the lighthouse frame drifts
 
 Driver-side universe (`config/lighthouse/lighthousedb.json`) is mutated at runtime
-(VAs below are for the 2026-09-16 build; add 0x140 for 2026-09-13):
+(VAs below are for the 2026-09-16 and 2026-10-17 builds; add 0x140 for 2026-09-13):
 
 1. **Tilt re-levelling every session.** `CLighthouseDB::UpdateBestTilt` takes the HMD-IMU
    gravity estimate for a base station, blends it into that base's dynamic state
@@ -31,7 +32,7 @@ Driver-side universe (`config/lighthouse/lighthousedb.json`) is mutated at runti
 
 Bytes are identical in both builds; only offsets differ.
 
-| id | effect | original | patched | 2026-09-16 offset / VA | 2026-09-13 offset / VA |
+| id | effect | original | patched | 2026-09-16 / 2026-10-17 offset / VA | 2026-09-13 offset / VA |
 |----|--------|----------|---------|------------------------|------------------------|
 | P2 | skip the "both bases global" refinement branch; new bases still learn | `f3 0f 10 6e 20` | `e9 95 04 00 00` (`jmp` to epilogue) | 0x5c5ea / 0x18005d1ea → 0x18005d684 | 0x5c72a / 0x18005d32a → 0x18005d7c4 |
 | P3a | SetTilt no longer stores recomputed pitch/roll into universe | `f2 0f 11 46 38` | `90 x5` | 0x62743 / 0x180063343 | 0x62883 / 0x180063483 |
@@ -52,3 +53,4 @@ python patch_lighthouse.py <dll> --restore        # put the .orig backup back
 
 Re-running is idempotent. Steam's integrity check and SteamVR updates restore the stock DLL,
 so keep this script around and re-run it after every update.
+
